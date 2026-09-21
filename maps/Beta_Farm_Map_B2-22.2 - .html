@@ -1,0 +1,739 @@
+
+<!DOCTYPE html>
+
+<html lang="fa" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>
+Beta Farm - Map Engine B2-22
+</title>
+
+
+<link
+    rel="stylesheet"
+    href="leaflet/leaflet.css"
+>
+
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+
+html,
+body,
+#map {
+
+    width: 100%;
+    height: 100%;
+
+    margin: 0;
+    padding: 0;
+
+}
+
+
+body {
+
+    overflow: hidden;
+
+    font-family:
+        Tahoma,
+        Arial,
+        sans-serif;
+
+    background: #e9eef2;
+
+}
+
+
+#map {
+
+    position: relative;
+
+}
+
+
+.map-title {
+
+    position: absolute;
+
+    top: 12px;
+    right: 12px;
+
+    z-index: 1000;
+
+    padding: 7px 11px;
+
+    border-radius: 6px;
+
+    background:
+        rgba(255,255,255,.94);
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+    box-shadow:
+        0 1px 5px rgba(0,0,0,.15);
+
+    pointer-events: none;
+
+}
+
+
+.map-status {
+
+    position: absolute;
+
+    right: 12px;
+    bottom: 10px;
+
+    z-index: 1000;
+
+    padding: 4px 8px;
+
+    border-radius: 5px;
+
+    background:
+        rgba(255,255,255,.92);
+
+    color: #53616d;
+
+    font-size: 10px;
+
+    pointer-events: none;
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div id="map"> 
+
+    <img
+    id="offlineTestImage"
+    src="002.png"
+    style="
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        z-index: 9999;
+    "
+    >
+    <div class="map-title">
+
+        Beta Farm Map Engine B2-22
+
+    </div>
+
+
+    <div
+        id="mapStatus"
+        class="map-status"
+    >
+
+        در حال بارگذاری نقشه...
+
+    </div>
+
+
+</div>
+
+
+<script src="leaflet/leaflet.js"></script>
+
+
+<script>
+
+"use strict";
+
+
+// ============================================================
+// وضعیت داخلی موتور
+// ============================================================
+
+let mapData = [];
+
+
+const mapStatus =
+    document.getElementById(
+        "mapStatus"
+    );
+
+
+function setStatus(text) {
+
+    mapStatus.textContent =
+        text;
+
+}
+
+
+// ============================================================
+// نقشه
+// مرکز اولیه = زنجان
+// ============================================================
+
+const map =
+    L.map(
+        "map",
+        {
+
+            zoomControl: false,
+
+            preferCanvas: true
+
+        }
+    );
+
+
+map.setView(
+
+    [
+        36.6769,
+        48.4850
+    ],
+
+    9
+
+);
+
+
+L.control.zoom(
+
+    {
+
+        position:
+            "bottomleft"
+
+    }
+
+).addTo(map);
+
+const offlineBounds = [
+    [35.5779816, 47.1799518],
+    [37.2492219, 49.4336719]
+];
+
+const offlineImage =
+    L.imageOverlay(
+        "002.png",
+        offlineBounds,
+        {
+            opacity: 1,
+            interactive: false
+        }
+    );
+// ============================================================
+// Tile
+// ============================================================
+
+const tiles =
+    L.tileLayer(
+        "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
+        {
+            maxZoom: 19,
+            attribution: "© OpenStreetMap",
+            crossOrigin: true
+        }
+    );
+
+
+/* ============================================================
+   Tile Diagnostic
+   ============================================================ */
+
+let tileLoadCount = 0;
+let tileErrorCount = 0;
+
+tiles.on(
+    "tileloadstart",
+    function(event) {
+
+        console.log(
+            "TILE LOAD START:",
+            event.coords
+        );
+
+    }
+);
+
+
+tiles.on(
+    "tileload",
+    function(event) {
+
+        tileLoadCount += 1;
+
+        console.log(
+            "TILE LOAD OK:",
+            tileLoadCount,
+            event.coords
+        );
+
+        setStatus(
+            "Tile OK: " +
+            tileLoadCount
+        );
+
+    }
+);
+
+
+tiles.on(
+    "tileerror",
+    function(event) {
+
+        tileErrorCount += 1;
+
+        const coords =
+            event.coords || {};
+
+        console.log(
+            "================================"
+        );
+
+        console.log(
+            "TILE ERROR #" +
+            tileErrorCount
+        );
+
+        console.log(
+            "Z:",
+            coords.z
+        );
+
+        console.log(
+            "X:",
+            coords.x
+        );
+
+        console.log(
+            "Y:",
+            coords.y
+        );
+
+        console.log(
+            "TILE:",
+            event.tile
+        );
+
+        console.log(
+            "URL:",
+            event.tile
+                ? event.tile.src
+                : "NO TILE URL"
+        );
+
+        console.log(
+            "================================"
+        );
+
+        setStatus(
+            "Tile Error: " +
+            tileErrorCount
+        );
+
+    }
+);
+tiles.addTo(map);
+
+
+/* ============================================================
+   گزارش وضعیت اولیه
+   ============================================================ */
+console.log(
+    "TILE LAYER ADDED"
+);
+
+console.log(
+    "MAP CENTER:",
+    map.getCenter()
+);
+
+console.log(
+    "MAP ZOOM:",
+    map.getZoom()
+);
+
+console.log(
+    "TILE ERROR COUNT:",
+    tileErrorCount
+);
+
+console.log(
+    "TILE LOAD COUNT:",
+    tileLoadCount
+);
+
+// ============================================================
+// لایه نقاط
+// ============================================================
+
+const markerLayer =
+
+    L.layerGroup()
+        .addTo(map);
+
+
+// ============================================================
+// Marker
+// Dynamic Filter مختصات آماده را می‌فرستد
+// ============================================================
+function createMarker(item) {
+
+    if (!item) {
+        return null;
+    }
+
+    let lat;
+    let lon;
+
+    if (
+        item.lat !== undefined &&
+        item.lon !== undefined
+    ) {
+
+        lat = Number(item.lat);
+        lon = Number(item.lon);
+
+    } else if (
+        item.Y !== undefined &&
+        item.X !== undefined
+    ) {
+
+        lat = Number(item.Y);
+        lon = Number(item.X);
+
+    } else {
+
+        return null;
+    }
+
+    if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lon)
+    ) {
+
+        return null;
+    }
+
+   return L.circleMarker(
+    [
+        lat,
+        lon
+    ],
+    {
+        radius: 7,
+        color: "#ffffff",
+        weight: 2,
+        fillColor: "#20a44b",
+        fillOpacity: 1
+    }
+); 
+}
+
+// ============================================================
+// نمایش نقاط
+// ============================================================
+
+function drawMarkers(data) {
+
+    markerLayer.clearLayers();
+
+    mapData =
+        Array.isArray(data)
+            ? data
+            : [];
+
+    let validCount = 0;
+
+    mapData.forEach(
+        function(item) {
+
+            const marker =
+                createMarker(item);
+
+                        if (marker) {
+                       marker.on(
+    "click",
+    function() {
+
+        if (
+            window.parent &&
+            window.parent !== window
+        ) {
+
+            window.parent.postMessage(
+                {
+                    type:
+                        "BETA_FARM_MAP_MARKER_CLICK",
+
+                    FM_ID:
+                        item.FM_ID || "TEST_CLICK"
+                },
+                "*"
+            );
+
+        }
+
+    }
+);
+                                         markerLayer.addLayer(
+                    marker
+                );
+
+                validCount += 1;
+
+            }
+
+        }
+    );
+
+
+    // ========================================================
+    // تست مرکز روی اولین نقطه
+    // ========================================================
+
+    if (validCount > 0) {
+
+        const first =
+            mapData[0];
+
+        const lat =
+            Number(
+                first.lat !== undefined
+                    ? first.lat
+                    : first.Y
+            );
+
+        const lon =
+            Number(
+                first.lon !== undefined
+                    ? first.lon
+                    : first.X
+            );
+
+
+        if (
+            Number.isFinite(lat) &&
+            Number.isFinite(lon)
+        ) {
+
+            map.setView(
+                [
+                    lat,
+                    lon
+                ],
+                13
+            );
+
+        }
+
+    }
+
+
+    setStatus(
+        "دریافت: " +
+        mapData.length +
+        " | Marker: " +
+        validCount
+    );
+
+
+    window.setTimeout(
+        function() {
+
+            map.invalidateSize();
+
+        },
+        100
+    );
+
+}
+
+// ============================================================
+// Bridge
+//
+// Dynamic Filter:
+// BETA_FARM_MAP_UPDATE
+//
+// map_data = payload.units
+// ============================================================
+
+window.addEventListener(
+
+    "message",
+
+    function(event) {
+
+        if (!event.data) {
+
+            return;
+
+        }
+
+
+        if (
+
+            event.data.type !==
+
+            "BETA_FARM_MAP_UPDATE"
+
+        ) {
+
+            return;
+
+        }
+
+
+        const incoming =
+
+            event.data.map_data;
+
+
+        if (
+
+            !Array.isArray(
+                incoming
+            )
+
+        ) {
+
+            return;
+
+        }
+
+
+        drawMarkers(
+            incoming
+        );
+
+    }
+
+);
+
+
+// ============================================================
+// اعلام آماده بودن Map Engine
+// ============================================================
+
+window.addEventListener(
+
+    "load",
+
+    function() {
+
+        window.setTimeout(
+
+            function() {
+
+                map.invalidateSize();
+
+
+                if (
+
+                    window.parent !==
+                    window
+
+                ) {
+
+                    window.parent.postMessage(
+
+                        {
+
+                            type:
+                                "BETA_FARM_MAP_READY",
+
+                            version:
+                                "B2-22"
+
+                        },
+
+                        "*"
+
+                    );
+
+                }
+
+            },
+
+            200
+
+        );
+
+    }
+
+);
+
+
+// ============================================================
+// API حداقلی
+// ============================================================
+
+window.BetaFarmMap = {
+
+    setData:
+        function(data) {
+
+            drawMarkers(
+                data
+            );
+
+        },
+
+
+    clear:
+        function() {
+
+            markerLayer.clearLayers();
+
+            mapData = [];
+
+            setStatus(
+                "تعداد نقاط: 0"
+            );
+
+        },
+
+
+    getMap:
+        function() {
+
+            return map;
+
+        }
+
+};
+
+
+// ============================================================
+// اندازه اولیه
+// ============================================================
+
+map.invalidateSize();
+
+</script>
+
+
+</body>
+
+</html>
